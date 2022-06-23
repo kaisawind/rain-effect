@@ -1,9 +1,9 @@
 # You must change these to your own details.
 [package]
-name = "rust-webpack-template"
+name = "rain-effect"
 description = "My super awesome Rust, WebAssembly, and Webpack project!"
 version = "0.1.0"
-authors = ["You <you@example.com>"]
+authors = ["kaisawind <wind.kaisa@gmail.com>"]
 categories = ["wasm"]
 readme = "README.md"
 edition = "2021"
@@ -30,11 +30,24 @@ wasm-bindgen = "0.2.81"
 # allocator, so it's not enabled by default.
 wee_alloc = { version = "0.4.5", optional = true }
 
+# Converting between JavaScript Promises to Rust Futures.
+wasm-bindgen-futures = "0.4.31"
+
+js-sys = "0.3.58"
+
 # The `web-sys` crate allows you to interact with the various browser APIs,
 # like the DOM.
 [dependencies.web-sys]
 version = "0.3.58"
-features = ["console"]
+features = [
+  "console",
+  'Window',
+  'Document',
+  'HtmlCanvasElement',
+  'HtmlImageElement',
+  'Event',
+  'EventListener'
+]
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

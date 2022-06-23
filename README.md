@@ -1,7 +1,14 @@
+# Rain Effect
+
+
+## Papers
+[Rain Water Effect Experiments](https://tympanus.net/codrops/2015/11/04/rain-water-effect-experiments/)
+[Creative Gooey Effects](https://tympanus.net/codrops/2015/03/10/creative-gooey-effects/)
+
 ## How to install
 
 ```sh
-npm install
+yarn
 ```
 
 ## How to run in debug mode
