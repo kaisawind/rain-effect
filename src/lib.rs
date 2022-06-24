@@ -1,12 +1,13 @@
 mod image_future;
 mod images;
+mod rain_drops;
 mod rain_effect;
 mod textures;
 
 use image_future::ImageFuture;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
-use web_sys::HtmlImageElement;
+use wasm_bindgen::JsCast;
+use web_sys::{console, window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement};
 
 // When the `wee_alloc` feature is enabled, this uses `wee_alloc` as the global
 // allocator.
@@ -34,4 +35,30 @@ pub fn main_js() -> Result<(), JsValue> {
 pub async fn load_image(path: String) -> HtmlImageElement {
     let image = ImageFuture::new(path.as_ref()).await.unwrap();
     image
+}
+
+/// create canvas element by document
+///
+/// Example:
+/// ```rust
+/// let (canvas, ctx) = create_canvas_element(640, 320);
+/// ```
+///
+pub fn create_canvas_element(
+    w: u32,
+    h: u32,
+) -> Result<(HtmlCanvasElement, CanvasRenderingContext2d), JsValue> {
+    let document = window().unwrap().document().unwrap();
+    let canvas = document
+        .create_element("canvas")?
+        .dyn_into::<HtmlCanvasElement>()?;
+    canvas.set_width(w);
+    canvas.set_height(h);
+
+    let ctx = canvas
+        .get_context("2d")?
+        .unwrap()
+        .dyn_into::<CanvasRenderingContext2d>()?;
+
+    Ok((canvas, ctx))
 }

@@ -1,3 +1,4 @@
+use crate::create_canvas_element;
 use crate::images::{Images, Weather};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -14,8 +15,8 @@ pub enum FgSize {
 }
 
 pub struct Texture {
-    canvas: HtmlCanvasElement,
-    ctx: CanvasRenderingContext2d,
+    pub(crate) canvas: HtmlCanvasElement,
+    pub(crate) ctx: CanvasRenderingContext2d,
 }
 
 pub struct Textures {
@@ -27,35 +28,12 @@ pub struct Textures {
 impl Textures {
     pub async fn new(map: &js_sys::Map) -> Self {
         let alpha = 1.0;
-        let document = window().unwrap().document().unwrap();
-        let fg = document
-            .create_element("canvas")
-            .unwrap()
-            .dyn_into::<HtmlCanvasElement>()
-            .unwrap();
-        fg.set_width(FgSize::Width as u32);
-        fg.set_height(FgSize::Height as u32);
-        let fg_ctx = fg
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<CanvasRenderingContext2d>()
-            .unwrap();
+        let (fg, fg_ctx) =
+            create_canvas_element(FgSize::Width as u32, FgSize::Height as u32).unwrap();
         fg_ctx.set_global_alpha(alpha);
 
-        let bg = document
-            .create_element("canvas")
-            .unwrap()
-            .dyn_into::<HtmlCanvasElement>()
-            .unwrap();
-        bg.set_width(BgSize::Width as u32);
-        bg.set_height(BgSize::Height as u32);
-        let bg_ctx = bg
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<CanvasRenderingContext2d>()
-            .unwrap();
+        let (bg, bg_ctx) =
+            create_canvas_element(BgSize::Width as u32, BgSize::Height as u32).unwrap();
         bg_ctx.set_global_alpha(alpha);
 
         let textures = Textures {
