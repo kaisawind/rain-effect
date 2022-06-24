@@ -15,8 +15,8 @@ pub enum FgSize {
 }
 
 pub struct Texture {
-    pub(crate) canvas: HtmlCanvasElement,
-    pub(crate) ctx: CanvasRenderingContext2d,
+    pub canvas: HtmlCanvasElement,
+    pub ctx: CanvasRenderingContext2d,
 }
 
 pub struct Textures {

@@ -42,6 +42,10 @@ js-sys = "0.3.58"
 # futures-rs is a library providing the foundations for asynchronous programming in Rust.
 futures = "0.3.21"
 
+# A Rust library for random number generation
+rand = "0.8.5"
+getrandom = { version = "0.2.7", features = ["js"] }
+
 # The `web-sys` crate allows you to interact with the various browser APIs,
 # like the DOM.
 [dependencies.web-sys]

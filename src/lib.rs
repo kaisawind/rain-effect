@@ -1,3 +1,4 @@
+mod drop;
 mod image_future;
 mod images;
 mod rain_drops;

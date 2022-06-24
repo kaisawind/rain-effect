@@ -1,6 +1,9 @@
 use crate::create_canvas_element;
+use crate::drop::Drop;
 use crate::images::ColorImage;
 use crate::textures::Texture;
+use js_sys::Math::{max, min};
+use rand::{thread_rng, Rng};
 use std::f64::consts::PI;
 use std::time::SystemTime;
 use wasm_bindgen::{JsCast, JsValue};
@@ -12,11 +15,15 @@ pub struct Options {
     time_scale: f64,
     raining: bool,
     droplets_rate: f64,
+    min_r: f64,
+    max_r: f64,
 }
 
 impl Default for Options {
     fn default() -> Self {
         Options {
+            min_r: 10.0,
+            max_r: 40.0,
             time_scale: 1.0,
             raining: true,
             droplets_rate: 50.0,
@@ -96,7 +103,7 @@ impl RainDrops {
     pub fn render_droplets(&mut self) -> Result<(), JsValue> {
         let (buf, buf_ctx) = create_canvas_element(DROP_SIZE, DROP_SIZE)?;
 
-        let values = (0..=255).collect::<Vec<_>>();
+        let values = (0..255).collect::<Vec<_>>();
         self.drops_gfx = values
             .iter()
             .map(|i| {
@@ -168,6 +175,45 @@ impl RainDrops {
         self.clear_gfx = Some(clear);
         Ok(())
     }
+
+    fn draw_drop(&self, ctx: &CanvasRenderingContext2d, drop: Drop) {
+        if !self.drops_gfx.is_empty() {
+            let x = drop.x;
+            let y = drop.y;
+            let r = drop.r;
+            let spread_x = drop.spread_x;
+            let spread_y = drop.spread_y;
+
+            let scale_x = 1.0;
+            let scale_y = 1.5;
+            let mut d = max(
+                0.0,
+                min(1.0, ((r - self.opts.min_r) / self.delta_r()) * 0.9),
+            );
+            d *= 1.0 / (((spread_x + spread_y) * 0.5) + 1.0);
+            let d = (d * (self.drops_gfx.len() - 1) as f64).floor();
+
+            ctx.set_global_alpha(1.0);
+            ctx.set_global_composite_operation("source-over").unwrap();
+            ctx.draw_image_with_html_canvas_element_and_dw_and_dh(
+                &self.drops_gfx[d as usize],
+                (x - (r * scale_x * (spread_x + 1.0))) * self.scale,
+                (y - (r * scale_y * (spread_y + 1.0))) * self.scale,
+                (r * 2.0 * scale_x * (spread_y + 1.0)) * self.scale,
+                (r * 2.0 * scale_y * (spread_y + 1.0)) * self.scale,
+            )
+            .unwrap();
+        }
+    }
+
+    fn draw_droplet(&self, x: f64, y: f64, r: f64) {
+        let mut drop = Drop::default();
+        drop.x = x * self.droplets_pixel_density;
+        drop.y = y * self.droplets_pixel_density;
+        drop.r = r * self.droplets_pixel_density;
+        self.draw_drop(&self.droplets.ctx, drop);
+    }
+
     pub fn clear_canvas(&self) {
         self.texture
             .ctx
@@ -215,8 +261,12 @@ impl RainDrops {
         if self.opts.raining {
             self.droplets_counter +=
                 (self.opts.droplets_rate * time_scan * self.area_multiplier()) as u32;
+            let mut rng = thread_rng();
             for _x in [0..=self.droplets_counter].iter() {
                 self.droplets_counter -= 1;
+                let x = rng.gen_range(0..(self.width / self.scale) as i32);
+                let y = rng.gen_range(0..(self.height / self.scale) as i32);
+                let r = rng.gen_range(0..(self.width / self.scale) as i32);
             }
         }
     }
@@ -235,5 +285,9 @@ impl RainDrops {
     fn area_multiplier(&self) -> f64 {
         // 当前面积相对XGA分辨率的乘数
         (self.area() / (1024.0 * 768.0)).sqrt()
+    }
+
+    fn delta_r(&self) -> f64 {
+        self.opts.max_r - self.opts.min_r
     }
 }
