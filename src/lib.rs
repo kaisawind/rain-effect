@@ -1,7 +1,12 @@
+mod image_future;
+mod images;
 mod rain_effect;
+mod textures;
 
+use image_future::ImageFuture;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
+use web_sys::HtmlImageElement;
 
 // When the `wee_alloc` feature is enabled, this uses `wee_alloc` as the global
 // allocator.
@@ -23,4 +28,10 @@ pub fn main_js() -> Result<(), JsValue> {
     console::log_1(&JsValue::from_str("Hello world!"));
 
     Ok(())
+}
+
+#[wasm_bindgen]
+pub async fn load_image(path: String) -> HtmlImageElement {
+    let image = ImageFuture::new(path.as_ref()).await.unwrap();
+    image
 }

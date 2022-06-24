@@ -21,9 +21,13 @@ lto = true
 #default = ["wee_alloc"]
 
 [dependencies]
+
+# Serde is a framework for serializing and deserializing Rust data structures efficiently and generically.
+serde = "1.0.137"
+
 # The `wasm-bindgen` crate provides the bare minimum functionality needed
 # to interact with JavaScript.
-wasm-bindgen = "0.2.81"
+wasm-bindgen = { version = "0.2.81", features = ["serde-serialize"] }
 
 # `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
 # compared to the default allocator's ~10K. However, it is slower than the default
@@ -35,12 +39,16 @@ wasm-bindgen-futures = "0.4.31"
 
 js-sys = "0.3.58"
 
+# futures-rs is a library providing the foundations for asynchronous programming in Rust.
+futures = "0.3.21"
+
 # The `web-sys` crate allows you to interact with the various browser APIs,
 # like the DOM.
 [dependencies.web-sys]
 version = "0.3.58"
 features = [
-  "console",
+  'CanvasRenderingContext2d',
+  'console',
   'Window',
   'Document',
   'HtmlCanvasElement',
