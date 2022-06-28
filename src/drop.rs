@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Drop {
@@ -10,7 +11,7 @@ pub struct Drop {
     pub momentum_x: f64,
     pub last_spawn: f64,
     pub next_spawn: f64,
-    pub parent: Option<Rc<Drop>>,
+    pub parent: Option<Rc<RefCell<Drop>>>,
     pub is_new: bool,
     pub killed: bool,
     pub shrink: f64,
@@ -33,5 +34,13 @@ impl Default for Drop {
             killed: false,
             shrink: 0.0,
         }
+    }
+}
+
+impl Drop {
+    pub fn new() -> Rc<RefCell<Self>> {
+        let drop = Drop::default();
+
+        Rc::new(RefCell::new(drop))
     }
 }

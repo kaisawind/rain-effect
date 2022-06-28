@@ -4,7 +4,9 @@ use crate::images::ColorImage;
 use crate::textures::Texture;
 use js_sys::Math::{max, min};
 use rand::{thread_rng, Rng};
+use std::cell::{RefCell, RefMut};
 use std::f64::consts::PI;
+use std::rc::Rc;
 use std::time::SystemTime;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{console, window, CanvasRenderingContext2d, HtmlCanvasElement};
@@ -17,6 +19,21 @@ pub struct Options {
     droplets_rate: f64,
     min_r: f64,
     max_r: f64,
+    max_drops: i32,
+    droplets_size: [f64; 2],
+    droplets_cleaning_radius_multiplier: f64,
+    drop_fall_multiplier: f64,
+    rain_limit: f64,
+    rain_chance: f64,
+    spawn_area: [f64; 2],
+    auto_shrink: bool,
+    trail_rate: f64,
+    trail_scale_range: [f64; 2],
+    global_time_scale: f64,
+    collision_radius: f64,
+    collision_radius_increase: f64,
+    collision_boost_multiplier: f64,
+    collision_boost: f64,
 }
 
 impl Default for Options {
@@ -27,6 +44,21 @@ impl Default for Options {
             time_scale: 1.0,
             raining: true,
             droplets_rate: 50.0,
+            droplets_size: [2.0, 4.0],
+            drop_fall_multiplier: 1.0,
+            rain_limit: 3.0,
+            rain_chance: 0.3,
+            spawn_area: [-0.1, 0.95],
+            auto_shrink: true,
+            trail_rate: 1.0,
+            max_drops: 900,
+            trail_scale_range: [0.2, 0.5],
+            global_time_scale: 1.0,
+            collision_radius: 0.65,
+            collision_radius_increase: 0.01,
+            collision_boost_multiplier: 0.05,
+            collision_boost: 1.0,
+            droplets_cleaning_radius_multiplier: 0.43,
         }
     }
 }
@@ -56,6 +88,8 @@ pub struct RainDrops {
     // 雨滴纹理图片
     color_image: ColorImage,
 
+    // 雨滴
+    drops: Vec<Rc<RefCell<Drop>>>,
     // 雨滴下落画布
     drops_gfx: Vec<HtmlCanvasElement>,
     // 雨滴清理画布
@@ -95,6 +129,7 @@ impl RainDrops {
                 alpha: None,
                 color: None,
             },
+            drops: Vec::new(),
             drops_gfx: Vec::new(),
             clear_gfx: None,
         }
@@ -176,7 +211,7 @@ impl RainDrops {
         Ok(())
     }
 
-    fn draw_drop(&self, ctx: &CanvasRenderingContext2d, drop: Drop) {
+    fn draw_drop(&self, ctx: &CanvasRenderingContext2d, drop: RefMut<Drop>) {
         if !self.drops_gfx.is_empty() {
             let x = drop.x;
             let y = drop.y;
@@ -207,11 +242,33 @@ impl RainDrops {
     }
 
     fn draw_droplet(&self, x: f64, y: f64, r: f64) {
-        let mut drop = Drop::default();
-        drop.x = x * self.droplets_pixel_density;
-        drop.y = y * self.droplets_pixel_density;
-        drop.r = r * self.droplets_pixel_density;
-        self.draw_drop(&self.droplets.ctx, drop);
+        let drop = Drop::new();
+        drop.borrow_mut().x = x * self.droplets_pixel_density;
+        drop.borrow_mut().y = y * self.droplets_pixel_density;
+        drop.borrow_mut().r = r * self.droplets_pixel_density;
+        self.draw_drop(&self.droplets.ctx, drop.borrow_mut());
+    }
+
+    fn clear_droplets(&self, x: f64, y: f64, r: Option<f64>) {
+        let r = match r {
+            Some(r) => r,
+            None => 40.0,
+        };
+        let multiplier = self.droplets_pixel_density * self.scale;
+        self.droplets
+            .ctx
+            .set_global_composite_operation("destination-out")
+            .unwrap();
+        self.droplets
+            .ctx
+            .draw_image_with_html_canvas_element_and_dw_and_dh(
+                self.clear_gfx.as_ref().unwrap(),
+                (x - r) * multiplier,
+                (y - r) * multiplier,
+                (r * 2.0) * multiplier,
+                (r * 2.0) * multiplier * 1.5,
+            )
+            .unwrap();
     }
 
     pub fn clear_canvas(&self) {
@@ -262,17 +319,213 @@ impl RainDrops {
             self.droplets_counter +=
                 (self.opts.droplets_rate * time_scan * self.area_multiplier()) as u32;
             let mut rng = thread_rng();
+            let [min, max] = self.opts.droplets_size;
             for _x in [0..=self.droplets_counter].iter() {
                 self.droplets_counter -= 1;
-                let x = rng.gen_range(0..(self.width / self.scale) as i32);
-                let y = rng.gen_range(0..(self.height / self.scale) as i32);
-                let r = rng.gen_range(0..(self.width / self.scale) as i32);
+                let x = rng.gen_range(0..(self.width / self.scale) as i32) as f64;
+                let y = rng.gen_range(0..(self.height / self.scale) as i32) as f64;
+                let r = min + rng.gen::<f64>().powi(2) * (max - min);
+                self.draw_droplet(x, y, r);
             }
         }
+
+        self.texture
+            .ctx
+            .draw_image_with_html_canvas_element_and_dw_and_dh(
+                &self.droplets.canvas,
+                0.0,
+                0.0,
+                self.width,
+                self.height,
+            )
+            .unwrap();
+    }
+
+    fn update_rain(&self, time_scan: f64) -> Vec<Rc<RefCell<Drop>>> {
+        let mut drops: Vec<Rc<RefCell<Drop>>> = Vec::new();
+        if self.opts.raining {
+            let limit = (self.opts.rain_limit * time_scan * self.area_multiplier()) as i32;
+            let mut count = 0;
+            let mut rng = thread_rng();
+            let (min, max) = (self.opts.min_r, self.opts.max_r);
+            let (w, h) = (self.width / self.scale, self.height / self.scale);
+            let [spawn_min, spawn_max] = self.opts.spawn_area.map(|x| x * h);
+            while rng.gen::<f64>() < self.opts.rain_chance && count < limit {
+                count += 1;
+                let x = rng.gen_range(0..w as i32) as f64;
+                let y = rng.gen_range(spawn_min as i32..spawn_max as i32) as f64;
+                let n = rng.gen::<f64>().powi(3);
+                let r = min + n * (max - min);
+                let momentum = 1.0 + (r - self.opts.min_r) * 0.1 + rng.gen::<f64>() * 2.0;
+
+                if !self.is_full_drops() {
+                    let drop = Drop::new();
+
+                    drop.borrow_mut().x = x;
+                    drop.borrow_mut().y = y;
+                    drop.borrow_mut().r = r;
+                    drop.borrow_mut().momentum = momentum;
+                    drop.borrow_mut().spread_x = 1.5;
+                    drop.borrow_mut().spread_y = 1.5;
+
+                    drops.push(drop);
+                }
+            }
+        }
+
+        drops
     }
 
     // 更新雨滴下落过程
-    fn update_drops(&mut self, time_scan: f64) {}
+    fn update_drops(&mut self, time_scan: f64) {
+        self.update_droplets(time_scan);
+        let mut drops = self.update_rain(time_scan);
+
+        let (w, h) = (self.width / self.scale, self.height / self.scale);
+
+        self.drops.sort_by(|a, b| {
+            let va = (a.borrow_mut().y * w + a.borrow_mut().x) as i32;
+            let vb = (b.borrow_mut().y * w + b.borrow_mut().x) as i32;
+            va.cmp(&vb)
+        });
+
+        let (min_r, max_r) = (self.opts.min_r, self.opts.max_r);
+        let mut rng = thread_rng();
+
+        let drop_fall = min_r * self.opts.drop_fall_multiplier;
+        let delta_r = 0.1 / self.delta_r() * time_scan;
+        let is_full_drops = self.is_full_drops();
+        for (i, rc_drop) in self.drops.iter().enumerate() {
+            let mut drop = rc_drop.borrow_mut();
+            if !drop.killed {
+                // 更新重力
+                // 雨滴下滑的几率
+                if rng.gen::<f64>() < (drop.r - drop_fall) * delta_r {
+                    drop.momentum += rng.gen::<f64>() * (drop.r / max_r * 4.0);
+                }
+
+                // 清除小的雨滴
+                if self.opts.auto_shrink && drop.r <= min_r && rng.gen::<f64>() < 0.05 * time_scan {
+                    drop.shrink += 0.01;
+                }
+
+                // 更新雨迹
+                if self.opts.raining {
+                    drop.last_spawn += drop.momentum * time_scan * self.opts.trail_rate;
+                    if drop.last_spawn > drop.next_spawn {
+                        if !is_full_drops {
+                            let new_drop = Drop::new();
+                            new_drop.borrow_mut().x =
+                                drop.x + (-drop.r + rng.gen::<f64>() * 2.0 * drop.r) * 0.1;
+                            new_drop.borrow_mut().y = drop.y - drop.r * 0.01;
+                            let [trail_min, trail_max] = self.opts.trail_scale_range;
+                            new_drop.borrow_mut().r =
+                                drop.r * (trail_min + rng.gen::<f64>() * (trail_max - trail_min));
+                            new_drop.borrow_mut().spread_y = drop.momentum * 0.1;
+                            new_drop.borrow_mut().parent = Some(Rc::clone(rc_drop));
+
+                            drops.push(Rc::clone(&new_drop));
+
+                            drop.r *= 0.97_f32.powf(time_scan as f32) as f64;
+                            drop.last_spawn = 0.0;
+                            drop.next_spawn = min_r + rng.gen::<f64>() * (max_r - min_r)
+                                - (drop.momentum * 2.0 * self.opts.trail_rate)
+                                + (max_r - drop.r);
+                        }
+                    }
+                }
+
+                // 标准流动
+                drop.spread_x *= 0.4_f32.powf(time_scan as f32) as f64;
+                drop.spread_y *= 0.7_f32.powf(time_scan as f32) as f64;
+
+                // 更新位置
+                let moved = drop.momentum > 0.0;
+                if moved && !drop.killed {
+                    drop.y += drop.momentum * self.opts.global_time_scale;
+                    drop.x += drop.momentum_x * self.opts.global_time_scale;
+                    if drop.y > h + drop.r {
+                        drop.killed = true;
+                    }
+                }
+
+                // 碰撞
+                let collision = (moved || drop.is_new) && !drop.killed;
+                drop.is_new = false;
+
+                if collision {
+                    for rc_drop2 in self.drops[i + 1..i + 70].iter() {
+                        let mut drop2 = rc_drop2.borrow_mut();
+                        if !Rc::ptr_eq(rc_drop, rc_drop2) && drop.r > drop2.r && !drop2.killed {
+                            // 比较父雨点是否相同
+                            let parent_eq = match (&drop.parent, &drop2.parent) {
+                                (Some(drop), Some(drop2)) => Rc::ptr_eq(drop, drop2),
+                                (None, None) => true,
+                                _ => false,
+                            };
+                            if !parent_eq {
+                                let dx = drop2.x - drop.x;
+                                let dy = drop2.y - drop.y;
+                                let d = (dx.powi(2) + dy.powi(2)).sqrt();
+                                if d < (drop.r + drop2.r)
+                                    * (self.opts.collision_radius
+                                        + drop.momentum
+                                            * self.opts.collision_radius_increase
+                                            * time_scan)
+                                {
+                                    let a1 = PI * drop.r.powi(2); // drop 的面积
+                                    let a2 = PI * drop2.r.powi(2); // drop2 的面积
+                                    let mut r = ((a1 + a2 * 0.8) / PI).sqrt(); // 两个雨点合并之后半径
+                                    if r > max_r {
+                                        // TODO: max_r ?
+                                        r = max_r;
+                                    }
+                                    drop.r = r;
+                                    drop.momentum_x += dx * 0.1;
+                                    drop.spread_x = 0.0;
+                                    drop.spread_y = 0.0;
+                                    drop.momentum = max(
+                                        drop2.momentum,
+                                        min(
+                                            40.0,
+                                            drop.momentum
+                                                + r * self.opts.collision_boost_multiplier
+                                                + self.opts.collision_boost,
+                                        ),
+                                    );
+                                    drop2.killed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 放慢流动速度
+                drop.momentum -= max(1.0, min_r * 0.5 - drop.momentum) * 0.1 * time_scan;
+                if drop.momentum < 0.0 {
+                    drop.momentum = 0.0;
+                }
+
+                drop.momentum_x *= 0.7_f32.powf(time_scan as f32) as f64;
+
+                if !drop.killed {
+                    drops.push(Rc::clone(&rc_drop));
+                    if moved && self.opts.droplets_rate > 0.0 {
+                        let r = drop.r * self.opts.droplets_cleaning_radius_multiplier;
+                        self.clear_droplets(drop.x, drop.y, Some(r));
+                    }
+
+                    self.draw_drop(&self.texture.ctx, drop);
+                }
+            }
+        }
+
+        self.drops = drops;
+    }
+
+    fn is_full_drops(&self) -> bool {
+        (self.drops.len() as i32) >= (self.opts.max_drops as f64 * self.area_multiplier()) as i32
+    }
 
     fn area(&self) -> f64 {
         let mut scale = self.scale;
