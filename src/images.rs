@@ -1,6 +1,7 @@
 use crate::image_future::ImageFuture;
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 use web_sys::HtmlImageElement;
 
 pub struct Image {
@@ -22,14 +23,14 @@ pub enum Weather {
 }
 
 impl Weather {
-    pub fn new(name: &str, img: Image) -> Option<Weather> {
+    pub fn new(name: &str, img: Image) -> Weather {
         match name {
-            "rain" => Some(Weather::Rain(img)),
-            "fallout" => Some(Weather::Fallout(img)),
-            "storm" => Some(Weather::Storm(img)),
-            "sun" => Some(Weather::Sun(img)),
-            "drizzle" => Some(Weather::Drizzle(img)),
-            _ => None,
+            "rain" => Weather::Rain(img),
+            "fallout" => Weather::Fallout(img),
+            "storm" => Weather::Storm(img),
+            "sun" => Weather::Sun(img),
+            "drizzle" => Weather::Drizzle(img),
+            _ => Weather::Rain(img),
         }
     }
 }
@@ -48,14 +49,13 @@ impl fmt::Display for Weather {
 }
 
 pub struct Images {
-    pub weather: Option<Weather>,
-    pub drop: ColorImage,
+    pub weather: Rc<Weather>,
+    pub drop: Rc<ColorImage>,
     values: HashMap<String, String>,
 }
 
 impl Images {
     pub async fn new(values: HashMap<String, String>) -> Self {
-
         let path = values.get("dropAlpha").unwrap();
         let drop_alpha = ImageFuture::new(path).await.unwrap();
 
@@ -77,11 +77,11 @@ impl Images {
 
         Images {
             values,
-            weather: Weather::new("rain", img),
-            drop: ColorImage {
+            weather: Rc::new(Weather::new("rain", img)),
+            drop: Rc::new(ColorImage {
                 alpha: Some(drop_alpha),
                 color: Some(drop_color),
-            },
+            }),
         }
     }
 
@@ -99,6 +99,6 @@ impl Images {
             bg: Some(bg),
         };
 
-        self.weather = Weather::new(value, img);
+        self.weather = Rc::new(Weather::new(value, img));
     }
 }

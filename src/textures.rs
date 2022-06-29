@@ -1,6 +1,8 @@
 use crate::create_canvas_element;
 use crate::images::{Images, Weather};
+use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{console, window, CanvasRenderingContext2d, HtmlCanvasElement};
@@ -21,8 +23,8 @@ pub struct Texture {
 }
 
 pub struct Textures {
-    fg: Texture,
-    bg: Texture,
+    pub fg: Rc<Texture>,
+    pub bg: Rc<Texture>,
     pub images: Images,
 }
 
@@ -39,17 +41,17 @@ impl Textures {
 
         let textures = Textures {
             images: Images::new(map).await,
-            fg: Texture {
+            fg: Rc::new(Texture {
                 canvas: fg,
                 ctx: fg_ctx,
-            },
-            bg: Texture {
+            }),
+            bg: Rc::new(Texture {
                 canvas: bg,
                 ctx: bg_ctx,
-            },
+            }),
         };
 
-        let weather = textures.images.weather.as_ref().unwrap();
+        let weather = textures.images.weather.borrow();
         let (image_fg, image_bg) = match weather {
             Weather::Rain(image)
             | Weather::Fallout(image)

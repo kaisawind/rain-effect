@@ -7,13 +7,12 @@ use rand::{thread_rng, Rng};
 use std::cell::{RefCell, RefMut};
 use std::f64::consts::PI;
 use std::rc::Rc;
-use std::time::SystemTime;
 use wasm_bindgen::JsValue;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
 
 const DROP_SIZE: u32 = 64;
 
-pub struct Options {
+pub struct RainDropsOptions {
     pub time_scale: f64,
     pub raining: bool,
     pub droplets_rate: f64,
@@ -36,9 +35,9 @@ pub struct Options {
     pub collision_boost: f64,
 }
 
-impl Default for Options {
+impl Default for RainDropsOptions {
     fn default() -> Self {
-        Options {
+        RainDropsOptions {
             min_r: 10.0,
             max_r: 40.0,
             time_scale: 1.0,
@@ -63,15 +62,15 @@ impl Default for Options {
     }
 }
 
-impl Options {
+impl RainDropsOptions {
     pub fn new() -> Self {
-        Options::default()
+        RainDropsOptions::default()
     }
 }
 
 pub struct RainDrops {
     // 全局配置项
-    opts: Options,
+    opts: RainDropsOptions,
     // 背景宽度
     width: f64,
     // 背景高度
@@ -79,7 +78,7 @@ pub struct RainDrops {
     // 缩放比例
     scale: f64,
     // 背景纹理
-    texture: Texture,
+    pub texture: Rc<RefCell<Texture>>,
     // 上一次描画时间
     last_time: f64,
     // 纹理清洁迭代
@@ -92,7 +91,7 @@ pub struct RainDrops {
     // 雨滴个数
     droplets_counter: u32,
     // 雨滴纹理图片
-    color_image: ColorImage,
+    color_image: Rc<ColorImage>,
 
     // 雨滴
     drops: Vec<Rc<RefCell<Drop>>>,
@@ -103,10 +102,16 @@ pub struct RainDrops {
 }
 
 impl RainDrops {
-    pub fn new(w: f64, h: f64, scale: f64, color_image: ColorImage, opts: Option<Options>) -> Self {
+    pub fn new(
+        w: f64,
+        h: f64,
+        scale: f64,
+        color_image: Rc<ColorImage>,
+        opts: Option<RainDropsOptions>,
+    ) -> Self {
         let opts = match opts {
             Some(x) => x,
-            None => Options::default(),
+            None => RainDropsOptions::default(),
         };
         let droplets_pixel_density = 1.0;
 
@@ -126,7 +131,7 @@ impl RainDrops {
             width: w,
             height: h,
             droplets_pixel_density,
-            texture: Texture { canvas, ctx },
+            texture: Rc::new(RefCell::new(Texture { canvas, ctx })),
             droplets: Texture {
                 canvas: droplets,
                 ctx: droplets_ctx,
@@ -276,6 +281,7 @@ impl RainDrops {
 
     fn clear_canvas(&self) {
         self.texture
+            .borrow_mut()
             .ctx
             .clear_rect(0.0, 0.0, self.width, self.height);
     }
@@ -334,6 +340,7 @@ impl RainDrops {
         }
 
         self.texture
+            .borrow_mut()
             .ctx
             .draw_image_with_html_canvas_element_and_dw_and_dh(
                 &self.droplets.canvas,
@@ -487,7 +494,6 @@ impl RainDrops {
                                     let a2 = PI * drop2.r.powi(2); // drop2 的面积
                                     let mut r = ((a1 + a2 * 0.8) / PI).sqrt(); // 两个雨点合并之后半径
                                     if r > max_r {
-                                        // TODO: max_r ?
                                         r = max_r;
                                     }
                                     drop.r = r;
@@ -525,7 +531,7 @@ impl RainDrops {
                         self.clear_droplets(drop.x, drop.y, Some(r));
                     }
 
-                    self.draw_drop(&self.texture.ctx, drop);
+                    self.draw_drop(&self.texture.borrow_mut().ctx, drop);
                 }
             }
         }

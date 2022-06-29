@@ -61,7 +61,11 @@ features = [
   'Event',
   'EventListener',
   'Performance',
-  'PerformanceTiming'
+  'PerformanceTiming',
+  'WebGlBuffer',
+  'WebGlRenderingContext',
+  'WebGlProgram',
+  'WebGlShader',
 ]
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

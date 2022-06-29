@@ -1,4 +1,5 @@
-use crate::rain_drops::{Options, RainDrops};
+use crate::rain_drops::{RainDrops, RainDropsOptions};
+use crate::rain_render::{RainRender, RainRenderOptions};
 use crate::textures::Textures;
 use crate::{now, request_animation_frame};
 use js_sys::Map;
@@ -12,8 +13,10 @@ use web_sys::{console, window, HtmlCanvasElement};
 #[wasm_bindgen]
 pub struct RainEffect {
     dpi: f64,
-    canvas: HtmlCanvasElement,
+    canvas: Rc<RefCell<HtmlCanvasElement>>,
     textures: Option<Textures>,
+    rain_drops: Rc<RefCell<RainDrops>>,
+    rain_render: Rc<RefCell<RainRender>>,
 }
 
 #[wasm_bindgen]
@@ -51,29 +54,59 @@ impl RainEffect {
         let values: HashMap<String, String> = map.into_serde().unwrap();
         let textures = Textures::new(values).await;
 
-        RainEffect {
-            dpi,
-            canvas,
-            textures: Some(textures),
-        }
-    }
-
-    pub fn draw(self) {
-        let textures = self.textures.unwrap();
-        let mut opts = Options::new();
+        let mut opts = RainDropsOptions::new();
         opts.trail_rate = 1.0;
         opts.trail_scale_range = [0.2, 0.45];
         opts.collision_radius = 0.45;
         opts.droplets_cleaning_radius_multiplier = 0.28;
-        let (w, h) = (self.canvas.width() as f64, self.canvas.height() as f64);
-        let mut rain_drops = RainDrops::new(w, h, self.dpi, textures.images.drop, Some(opts));
+        let (w, h) = (canvas.width() as f64, canvas.height() as f64);
+
+        let mut rain_drops = RainDrops::new(
+            w * dpi,
+            h * dpi,
+            dpi,
+            Rc::clone(&textures.images.drop),
+            Some(opts),
+        );
         rain_drops.render_droplets().unwrap();
 
+        let drops_texture = rain_drops.texture.clone();
+
+        let rain_drops = Rc::new(RefCell::new(rain_drops));
+
+        let canvas = Rc::new(RefCell::new(canvas));
+
+        let mut opts = RainRenderOptions::new();
+        opts.brightness = 1.04;
+        opts.alpha_multiply = 6.0;
+        opts.alpha_subtract = 3.0;
+
+        let rain_render = RainRender::new(
+            Rc::clone(&canvas),
+            drops_texture,
+            Rc::clone(&textures.fg),
+            Rc::clone(&textures.bg),
+            Some(opts),
+        );
+
+        let rain_render = Rc::new(RefCell::new(rain_render));
+
+        RainEffect {
+            dpi,
+            canvas,
+            textures: Some(textures),
+            rain_drops,
+            rain_render,
+        }
+    }
+
+    pub fn draw(self) {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
+        let rain_drops = self.rain_drops.clone();
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-            rain_drops.update();
+            rain_drops.borrow_mut().update();
             console::log_1(&JsValue::from(now()));
             // Schedule ourself for another requestAnimationFrame callback.
             request_animation_frame(f.borrow().as_ref().unwrap());
