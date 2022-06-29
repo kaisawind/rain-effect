@@ -57,8 +57,11 @@ features = [
   'Document',
   'HtmlCanvasElement',
   'HtmlImageElement',
+  'CssStyleDeclaration',
   'Event',
-  'EventListener'
+  'EventListener',
+  'Performance',
+  'PerformanceTiming'
 ]
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

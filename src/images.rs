@@ -54,8 +54,7 @@ pub struct Images {
 }
 
 impl Images {
-    pub async fn new(map: &js_sys::Map) -> Self {
-        let values: HashMap<String, String> = map.into_serde().unwrap();
+    pub async fn new(values: HashMap<String, String>) -> Self {
 
         let path = values.get("dropAlpha").unwrap();
         let drop_alpha = ImageFuture::new(path).await.unwrap();

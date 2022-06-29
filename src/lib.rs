@@ -63,3 +63,14 @@ pub fn create_canvas_element(
 
     Ok((canvas, ctx))
 }
+
+pub fn request_animation_frame(f: &Closure<dyn FnMut()>) {
+    window()
+        .unwrap()
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .unwrap();
+}
+
+pub fn now() -> f64 {
+    window().unwrap().performance().unwrap().now()
+}

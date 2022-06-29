@@ -1,39 +1,39 @@
-use crate::create_canvas_element;
 use crate::drop::Drop;
 use crate::images::ColorImage;
 use crate::textures::Texture;
+use crate::{create_canvas_element, now};
 use js_sys::Math::{max, min};
 use rand::{thread_rng, Rng};
 use std::cell::{RefCell, RefMut};
 use std::f64::consts::PI;
 use std::rc::Rc;
 use std::time::SystemTime;
-use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{console, window, CanvasRenderingContext2d, HtmlCanvasElement};
+use wasm_bindgen::JsValue;
+use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
 
 const DROP_SIZE: u32 = 64;
 
 pub struct Options {
-    time_scale: f64,
-    raining: bool,
-    droplets_rate: f64,
-    min_r: f64,
-    max_r: f64,
-    max_drops: i32,
-    droplets_size: [f64; 2],
-    droplets_cleaning_radius_multiplier: f64,
-    drop_fall_multiplier: f64,
-    rain_limit: f64,
-    rain_chance: f64,
-    spawn_area: [f64; 2],
-    auto_shrink: bool,
-    trail_rate: f64,
-    trail_scale_range: [f64; 2],
-    global_time_scale: f64,
-    collision_radius: f64,
-    collision_radius_increase: f64,
-    collision_boost_multiplier: f64,
-    collision_boost: f64,
+    pub time_scale: f64,
+    pub raining: bool,
+    pub droplets_rate: f64,
+    pub min_r: f64,
+    pub max_r: f64,
+    pub max_drops: i32,
+    pub droplets_size: [f64; 2],
+    pub droplets_cleaning_radius_multiplier: f64,
+    pub drop_fall_multiplier: f64,
+    pub rain_limit: f64,
+    pub rain_chance: f64,
+    pub spawn_area: [f64; 2],
+    pub auto_shrink: bool,
+    pub trail_rate: f64,
+    pub trail_scale_range: [f64; 2],
+    pub global_time_scale: f64,
+    pub collision_radius: f64,
+    pub collision_radius_increase: f64,
+    pub collision_boost_multiplier: f64,
+    pub collision_boost: f64,
 }
 
 impl Default for Options {
@@ -63,6 +63,12 @@ impl Default for Options {
     }
 }
 
+impl Options {
+    pub fn new() -> Self {
+        Options::default()
+    }
+}
+
 pub struct RainDrops {
     // 全局配置项
     opts: Options,
@@ -75,7 +81,7 @@ pub struct RainDrops {
     // 背景纹理
     texture: Texture,
     // 上一次描画时间
-    last_time: SystemTime,
+    last_time: f64,
     // 纹理清洁迭代
     cleaning_iterations: f64,
 
@@ -97,7 +103,7 @@ pub struct RainDrops {
 }
 
 impl RainDrops {
-    pub fn new(w: f64, h: f64, scale: f64, opts: Option<Options>) -> Self {
+    pub fn new(w: f64, h: f64, scale: f64, color_image: ColorImage, opts: Option<Options>) -> Self {
         let opts = match opts {
             Some(x) => x,
             None => Options::default(),
@@ -110,13 +116,13 @@ impl RainDrops {
             (h * droplets_pixel_density) as u32,
         )
         .unwrap();
-
+        let last_time = window().unwrap().performance().unwrap().now();
         RainDrops {
             opts,
             scale,
             droplets_counter: 0,
             cleaning_iterations: 0.0,
-            last_time: SystemTime::now(),
+            last_time,
             width: w,
             height: h,
             droplets_pixel_density,
@@ -125,10 +131,7 @@ impl RainDrops {
                 canvas: droplets,
                 ctx: droplets_ctx,
             },
-            color_image: ColorImage {
-                alpha: None,
-                color: None,
-            },
+            color_image,
             drops: Vec::new(),
             drops_gfx: Vec::new(),
             clear_gfx: None,
@@ -271,7 +274,7 @@ impl RainDrops {
             .unwrap();
     }
 
-    pub fn clear_canvas(&self) {
+    fn clear_canvas(&self) {
         self.texture
             .ctx
             .clear_rect(0.0, 0.0, self.width, self.height);
@@ -285,15 +288,16 @@ impl RainDrops {
         // clear old texture
         self.clear_canvas();
 
-        let now = SystemTime::now();
-
-        let delta = now.duration_since(self.last_time).unwrap().as_millis() as f64;
+        let now = now();
+        let delta = now - self.last_time;
         let mut time_scale = delta * 60.0 / 1000.0;
         if time_scale > 1.1 {
             time_scale = 1.1;
         }
         time_scale *= self.opts.time_scale;
         self.last_time = now;
+
+        self.update_drops(time_scale);
     }
 
     // 更新雨滴
@@ -384,8 +388,8 @@ impl RainDrops {
         let (w, h) = (self.width / self.scale, self.height / self.scale);
 
         self.drops.sort_by(|a, b| {
-            let va = (a.borrow_mut().y * w + a.borrow_mut().x) as i32;
-            let vb = (b.borrow_mut().y * w + b.borrow_mut().x) as i32;
+            let va = (a.borrow().y * w + a.borrow().x) as i32;
+            let vb = (b.borrow().y * w + b.borrow().x) as i32;
             va.cmp(&vb)
         });
 
@@ -454,7 +458,13 @@ impl RainDrops {
                 drop.is_new = false;
 
                 if collision {
-                    for rc_drop2 in self.drops[i + 1..i + 70].iter() {
+                    let mut slice: Vec<Rc<RefCell<Drop>>> = Vec::new();
+                    if i + 70 <= self.drops.len() {
+                        slice = self.drops[i + 1..i + 70].to_vec();
+                    } else if i + 1 < self.drops.len() && i + 70 > self.drops.len() {
+                        slice = self.drops[i + 1..].to_vec();
+                    }
+                    for rc_drop2 in slice.iter() {
                         let mut drop2 = rc_drop2.borrow_mut();
                         if !Rc::ptr_eq(rc_drop, rc_drop2) && drop.r > drop2.r && !drop2.killed {
                             // 比较父雨点是否相同

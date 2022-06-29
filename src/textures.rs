@@ -1,5 +1,6 @@
 use crate::create_canvas_element;
 use crate::images::{Images, Weather};
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{console, window, CanvasRenderingContext2d, HtmlCanvasElement};
@@ -22,11 +23,11 @@ pub struct Texture {
 pub struct Textures {
     fg: Texture,
     bg: Texture,
-    images: Images,
+    pub images: Images,
 }
 
 impl Textures {
-    pub async fn new(map: &js_sys::Map) -> Self {
+    pub async fn new(map: HashMap<String, String>) -> Self {
         let alpha = 1.0;
         let (fg, fg_ctx) =
             create_canvas_element(FgSize::Width as u32, FgSize::Height as u32).unwrap();
