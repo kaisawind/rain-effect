@@ -6,6 +6,7 @@ mod rain_effect;
 mod rain_render;
 mod shader;
 mod textures;
+mod weather;
 mod webgl;
 
 use image_future::ImageFuture;

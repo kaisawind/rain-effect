@@ -158,7 +158,7 @@ impl RainDrops {
                     .unwrap();
                 buf_ctx
                     .draw_image_with_html_image_element_and_dw_and_dh(
-                        self.color_image.color.as_ref().unwrap(),
+                        &self.color_image.color,
                         0.0,
                         0.0,
                         DROP_SIZE as f64,
@@ -178,7 +178,7 @@ impl RainDrops {
                     .unwrap();
                 drop_ctx
                     .draw_image_with_html_image_element_and_dw_and_dh(
-                        self.color_image.alpha.as_ref().unwrap(),
+                        &self.color_image.alpha,
                         0.0,
                         0.0,
                         DROP_SIZE as f64,

@@ -1,7 +1,9 @@
+use crate::images::{Images, WeatherImage};
 use crate::rain_drops::{RainDrops, RainDropsOptions};
 use crate::rain_render::{RainRender, RainRenderOptions};
-use crate::textures::Textures;
-use crate::{now, request_animation_frame};
+use crate::textures::{BgSize, FgSize, Texture};
+use crate::weather::Weather;
+use crate::{create_canvas_element, now, request_animation_frame};
 use js_sys::Map;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -14,7 +16,9 @@ use web_sys::{console, window, HtmlCanvasElement};
 pub struct RainEffect {
     dpi: f64,
     canvas: Rc<RefCell<HtmlCanvasElement>>,
-    textures: Option<Textures>,
+    fg: Rc<RefCell<Texture>>,
+    bg: Rc<RefCell<Texture>>,
+    weather_data: Rc<RefCell<Weather>>,
     rain_drops: Rc<RefCell<RainDrops>>,
     rain_render: Rc<RefCell<RainRender>>,
 }
@@ -52,7 +56,9 @@ impl RainEffect {
             .unwrap();
 
         let values: HashMap<String, String> = map.into_serde().unwrap();
-        let textures = Textures::new(values).await;
+        let images = Images::new(values).await;
+        let (fg, bg) = RainEffect::create_textures(images.weather.clone());
+        let (fg, bg) = (Rc::new(RefCell::new(fg)),Rc::new(RefCell::new(bg)));
 
         let mut opts = RainDropsOptions::new();
         opts.trail_rate = 1.0;
@@ -65,7 +71,7 @@ impl RainEffect {
             w * dpi,
             h * dpi,
             dpi,
-            Rc::clone(&textures.images.drop),
+            Rc::clone(&images.drop),
             Some(opts),
         );
         rain_drops.render_droplets().unwrap();
@@ -84,20 +90,69 @@ impl RainEffect {
         let rain_render = RainRender::new(
             Rc::clone(&canvas),
             drops_texture,
-            textures.fg.clone(),
-            textures.bg.clone(),
+            fg.clone(),
+            bg.clone(),
             Some(opts),
         );
 
         let rain_render = Rc::new(RefCell::new(rain_render));
 
+        let weather_data = Rc::new(RefCell::new(Weather::new_with_img(
+            images.weather.clone(),
+        )));
+
         RainEffect {
             dpi,
             canvas,
-            textures: Some(textures),
+            fg,
+            bg,
             rain_drops,
             rain_render,
+            weather_data,
         }
+    }
+
+    fn create_textures(weather: Rc<RefCell<WeatherImage>>) -> (Texture, Texture) {
+        let weather = weather.borrow();
+        let (image_fg, image_bg) = match &*weather {
+            WeatherImage::Rain(image)
+            | WeatherImage::Fallout(image)
+            | WeatherImage::Storm(image)
+            | WeatherImage::Sun(image)
+            | WeatherImage::Drizzle(image) => {
+                (&image.fg, &image.bg)
+            }
+        };
+        let alpha = 1.0;
+        let (fg, fg_ctx) =
+            create_canvas_element(FgSize::Width as u32, FgSize::Height as u32).unwrap();
+        fg_ctx.set_global_alpha(alpha);
+
+        fg_ctx
+            .draw_image_with_html_image_element_and_dw_and_dh(
+                &image_fg,
+                0.0,
+                0.0,
+                FgSize::Width as u32 as f64,
+                FgSize::Height as u32 as f64,
+            )
+            .unwrap();
+
+        let (bg, bg_ctx) =
+            create_canvas_element(BgSize::Width as u32, BgSize::Height as u32).unwrap();
+        bg_ctx.set_global_alpha(alpha);
+
+        bg_ctx
+            .draw_image_with_html_image_element_and_dw_and_dh(
+                &image_bg,
+                0.0,
+                0.0,
+                FgSize::Width as u32 as f64,
+                FgSize::Height as u32 as f64,
+            )
+            .unwrap();
+
+        (Texture{ canvas: fg, ctx: fg_ctx }, Texture{ canvas: bg, ctx: bg_ctx })
     }
 
     pub fn draw(self) {

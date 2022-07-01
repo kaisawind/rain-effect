@@ -145,4 +145,6 @@ impl RainRender {
         self.gl.active_texture(0);
         self.gl.update_texture(&self.drops_texture.borrow().canvas);
     }
+
+    fn setup_weather(&self) {}
 }

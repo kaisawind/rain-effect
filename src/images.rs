@@ -1,17 +1,18 @@
 use crate::image_future::ImageFuture;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 use web_sys::HtmlImageElement;
 
 pub struct Image {
-    pub fg: Option<HtmlImageElement>,
-    pub bg: Option<HtmlImageElement>,
+    pub fg: HtmlImageElement,
+    pub bg: HtmlImageElement,
 }
 
 pub struct ColorImage {
-    pub alpha: Option<HtmlImageElement>,
-    pub color: Option<HtmlImageElement>,
+    pub alpha: HtmlImageElement,
+    pub color: HtmlImageElement,
 }
 
 pub enum WeatherImage {
@@ -49,7 +50,7 @@ impl fmt::Display for WeatherImage {
 }
 
 pub struct Images {
-    pub weather: Rc<WeatherImage>,
+    pub weather: Rc<RefCell<WeatherImage>>,
     pub drop: Rc<ColorImage>,
     values: HashMap<String, String>,
 }
@@ -71,21 +72,21 @@ impl Images {
         let bg = ImageFuture::new(path).await.unwrap();
 
         let img = Image {
-            fg: Some(fg),
-            bg: Some(bg),
+            fg,
+            bg,
         };
 
         Images {
             values,
-            weather: Rc::new(WeatherImage::new("rain", img)),
+            weather: Rc::new(RefCell::new(WeatherImage::new("rain", img))),
             drop: Rc::new(ColorImage {
-                alpha: Some(drop_alpha),
-                color: Some(drop_color),
+                alpha: drop_alpha,
+                color: drop_color,
             }),
         }
     }
 
-    pub async fn change_weather(mut self, value: &str) {
+    pub async fn change_weather(&self, value: &str) {
         let fg = value.to_owned() + "Fg";
         let path = self.values.get(&fg).unwrap();
         let fg = ImageFuture::new(path).await.unwrap();
@@ -95,10 +96,10 @@ impl Images {
         let bg = ImageFuture::new(path).await.unwrap();
 
         let img = Image {
-            fg: Some(fg),
-            bg: Some(bg),
+            fg,
+            bg,
         };
 
-        self.weather = Rc::new(WeatherImage::new(value, img));
+        *self.weather.borrow_mut() = WeatherImage::new(value, img);
     }
 }
