@@ -1,6 +1,7 @@
 use crate::create_canvas_element;
 use crate::images::{Images, Weather};
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -23,8 +24,8 @@ pub struct Texture {
 }
 
 pub struct Textures {
-    pub fg: Rc<Texture>,
-    pub bg: Rc<Texture>,
+    pub fg: Rc<RefCell<Texture>>,
+    pub bg: Rc<RefCell<Texture>>,
     pub images: Images,
 }
 
@@ -41,14 +42,14 @@ impl Textures {
 
         let textures = Textures {
             images: Images::new(map).await,
-            fg: Rc::new(Texture {
+            fg: Rc::new(RefCell::new(Texture {
                 canvas: fg,
                 ctx: fg_ctx,
-            }),
-            bg: Rc::new(Texture {
+            })),
+            bg: Rc::new(RefCell::new(Texture {
                 canvas: bg,
                 ctx: bg_ctx,
-            }),
+            })),
         };
 
         let weather = textures.images.weather.borrow();
@@ -61,6 +62,7 @@ impl Textures {
         };
         textures
             .fg
+            .borrow_mut()
             .ctx
             .draw_image_with_html_image_element_and_dw_and_dh(
                 &image_fg,
@@ -72,6 +74,7 @@ impl Textures {
             .unwrap();
         textures
             .bg
+            .borrow_mut()
             .ctx
             .draw_image_with_html_image_element_and_dw_and_dh(
                 &image_bg,

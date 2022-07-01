@@ -23,7 +23,7 @@ lto = true
 [dependencies]
 
 # Serde is a framework for serializing and deserializing Rust data structures efficiently and generically.
-serde = "1.0.137"
+serde = { version = "1.0.137", features = ["derive"] }
 
 # The `wasm-bindgen` crate provides the bare minimum functionality needed
 # to interact with JavaScript.
@@ -66,6 +66,8 @@ features = [
   'WebGlRenderingContext',
   'WebGlProgram',
   'WebGlShader',
+  'WebGlUniformLocation',
+  'WebGlTexture'
 ]
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
