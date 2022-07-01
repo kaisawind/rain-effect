@@ -58,7 +58,9 @@ impl RainEffect {
         let values: HashMap<String, String> = map.into_serde().unwrap();
         let images = Images::new(values).await;
         let (fg, bg) = RainEffect::create_textures(images.weather.clone());
-        let (fg, bg) = (Rc::new(RefCell::new(fg)),Rc::new(RefCell::new(bg)));
+        let (fg, bg) = (Rc::new(RefCell::new(fg)), Rc::new(RefCell::new(bg)));
+
+        let weather_data = Weather::new_with_img(images.weather.clone());
 
         let mut opts = RainDropsOptions::new();
         opts.trail_rate = 1.0;
@@ -67,14 +69,10 @@ impl RainEffect {
         opts.droplets_cleaning_radius_multiplier = 0.28;
         let (w, h) = (canvas.width() as f64, canvas.height() as f64);
 
-        let mut rain_drops = RainDrops::new(
-            w * dpi,
-            h * dpi,
-            dpi,
-            Rc::clone(&images.drop),
-            Some(opts),
-        );
+        let mut rain_drops =
+            RainDrops::new(w * dpi, h * dpi, dpi, Rc::clone(&images.drop), Some(opts));
         rain_drops.render_droplets().unwrap();
+        rain_drops.set_options(weather_data.options());
 
         let drops_texture = rain_drops.texture.clone();
 
@@ -96,10 +94,7 @@ impl RainEffect {
         );
 
         let rain_render = Rc::new(RefCell::new(rain_render));
-
-        let weather_data = Rc::new(RefCell::new(Weather::new_with_img(
-            images.weather.clone(),
-        )));
+        let weather_data = Rc::new(RefCell::new(weather_data));
 
         RainEffect {
             dpi,
@@ -119,9 +114,7 @@ impl RainEffect {
             | WeatherImage::Fallout(image)
             | WeatherImage::Storm(image)
             | WeatherImage::Sun(image)
-            | WeatherImage::Drizzle(image) => {
-                (&image.fg, &image.bg)
-            }
+            | WeatherImage::Drizzle(image) => (&image.fg, &image.bg),
         };
         let alpha = 1.0;
         let (fg, fg_ctx) =
@@ -152,10 +145,19 @@ impl RainEffect {
             )
             .unwrap();
 
-        (Texture{ canvas: fg, ctx: fg_ctx }, Texture{ canvas: bg, ctx: bg_ctx })
+        (
+            Texture {
+                canvas: fg,
+                ctx: fg_ctx,
+            },
+            Texture {
+                canvas: bg,
+                ctx: bg_ctx,
+            },
+        )
     }
 
-    pub fn draw(self) {
+    pub fn draw(&self) {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
         let rain_drops = self.rain_drops.clone();

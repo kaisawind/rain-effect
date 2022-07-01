@@ -65,6 +65,16 @@ impl Weather {
         }
     }
 
+    pub fn options(&self) -> &WeatherOptions {
+        match self {
+            Weather::Rain(opts)
+            | Weather::Fallout(opts)
+            | Weather::Storm(opts)
+            | Weather::Sun(opts)
+            | Weather::Drizzle(opts) => opts,
+        }
+    }
+
     pub fn new_with_img(rc_img: Rc<RefCell<WeatherImage>>) -> Self {
         let mut opts = WeatherOptions::default();
         let img = &*rc_img.borrow();

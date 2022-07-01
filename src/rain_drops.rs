@@ -1,6 +1,7 @@
 use crate::drop::Drop;
 use crate::images::ColorImage;
 use crate::textures::Texture;
+use crate::weather::WeatherOptions;
 use crate::{create_canvas_element, now};
 use js_sys::Math::{max, min};
 use rand::{thread_rng, Rng};
@@ -558,5 +559,18 @@ impl RainDrops {
 
     fn delta_r(&self) -> f64 {
         self.opts.max_r - self.opts.min_r
+    }
+
+    pub fn set_options(&mut self, opts: &WeatherOptions) {
+        self.opts.raining = opts.raining;
+        self.opts.min_r = opts.min_r;
+        self.opts.max_r = opts.max_r;
+        self.opts.rain_chance = opts.rain_chance;
+        self.opts.rain_limit = opts.rain_limit;
+        self.opts.droplets_rate = opts.droplets_rate;
+        self.opts.droplets_size = opts.droplets_size;
+        self.opts.trail_rate = opts.trail_rate;
+        self.opts.trail_scale_range = opts.trail_scale_range;
+        self.opts.collision_radius_increase = opts.collision_radius_increase;
     }
 }
