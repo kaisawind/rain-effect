@@ -14,7 +14,7 @@ pub struct ColorImage {
     pub color: Option<HtmlImageElement>,
 }
 
-pub enum Weather {
+pub enum WeatherImage {
     Rain(Image),
     Fallout(Image),
     Storm(Image),
@@ -22,34 +22,34 @@ pub enum Weather {
     Drizzle(Image),
 }
 
-impl Weather {
-    pub fn new(name: &str, img: Image) -> Weather {
+impl WeatherImage {
+    pub fn new(name: &str, img: Image) -> WeatherImage {
         match name {
-            "rain" => Weather::Rain(img),
-            "fallout" => Weather::Fallout(img),
-            "storm" => Weather::Storm(img),
-            "sun" => Weather::Sun(img),
-            "drizzle" => Weather::Drizzle(img),
-            _ => Weather::Rain(img),
+            "rain" => WeatherImage::Rain(img),
+            "fallout" => WeatherImage::Fallout(img),
+            "storm" => WeatherImage::Storm(img),
+            "sun" => WeatherImage::Sun(img),
+            "drizzle" => WeatherImage::Drizzle(img),
+            _ => WeatherImage::Rain(img),
         }
     }
 }
 
-impl fmt::Display for Weather {
+impl fmt::Display for WeatherImage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let value = match *self {
-            Weather::Rain(_) => "rain",
-            Weather::Fallout(_) => "fallout",
-            Weather::Storm(_) => "storm",
-            Weather::Sun(_) => "sun",
-            Weather::Drizzle(_) => "drizzle",
+            WeatherImage::Rain(_) => "rain",
+            WeatherImage::Fallout(_) => "fallout",
+            WeatherImage::Storm(_) => "storm",
+            WeatherImage::Sun(_) => "sun",
+            WeatherImage::Drizzle(_) => "drizzle",
         };
         write!(f, "{}", value)
     }
 }
 
 pub struct Images {
-    pub weather: Rc<Weather>,
+    pub weather: Rc<WeatherImage>,
     pub drop: Rc<ColorImage>,
     values: HashMap<String, String>,
 }
@@ -77,7 +77,7 @@ impl Images {
 
         Images {
             values,
-            weather: Rc::new(Weather::new("rain", img)),
+            weather: Rc::new(WeatherImage::new("rain", img)),
             drop: Rc::new(ColorImage {
                 alpha: Some(drop_alpha),
                 color: Some(drop_color),
@@ -99,6 +99,6 @@ impl Images {
             bg: Some(bg),
         };
 
-        self.weather = Rc::new(Weather::new(value, img));
+        self.weather = Rc::new(WeatherImage::new(value, img));
     }
 }

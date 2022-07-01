@@ -1,5 +1,5 @@
 use crate::create_canvas_element;
-use crate::images::{Images, Weather};
+use crate::images::{Images, WeatherImage};
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -54,11 +54,13 @@ impl Textures {
 
         let weather = textures.images.weather.borrow();
         let (image_fg, image_bg) = match weather {
-            Weather::Rain(image)
-            | Weather::Fallout(image)
-            | Weather::Storm(image)
-            | Weather::Sun(image)
-            | Weather::Drizzle(image) => (image.fg.as_ref().unwrap(), image.bg.as_ref().unwrap()),
+            WeatherImage::Rain(image)
+            | WeatherImage::Fallout(image)
+            | WeatherImage::Storm(image)
+            | WeatherImage::Sun(image)
+            | WeatherImage::Drizzle(image) => {
+                (image.fg.as_ref().unwrap(), image.bg.as_ref().unwrap())
+            }
         };
         textures
             .fg
