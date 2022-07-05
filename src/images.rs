@@ -71,10 +71,7 @@ impl Images {
         let path = values.get(bg).unwrap();
         let bg = ImageFuture::new(path).await.unwrap();
 
-        let img = Image {
-            fg,
-            bg,
-        };
+        let img = Image { fg, bg };
 
         Images {
             values,
@@ -95,10 +92,7 @@ impl Images {
         let path = self.values.get(&bg).unwrap();
         let bg = ImageFuture::new(path).await.unwrap();
 
-        let img = Image {
-            fg,
-            bg,
-        };
+        let img = Image { fg, bg };
 
         *self.weather.borrow_mut() = WeatherImage::new(value, img);
     }

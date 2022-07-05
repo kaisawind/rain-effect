@@ -164,7 +164,7 @@ impl RainEffect {
         let rain_render = self.rain_render.clone();
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-            rain_drops.borrow_mut().update();
+            rain_drops.borrow_mut().draw();
             rain_render.borrow().draw();
             console::log_1(&JsValue::from(now()));
             // Schedule ourself for another requestAnimationFrame callback.

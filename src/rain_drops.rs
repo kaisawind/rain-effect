@@ -14,7 +14,8 @@ use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
 const DROP_SIZE: u32 = 64;
 
 pub struct RainDropsOptions {
-    pub time_scale: f64,
+    /// 时标比率（time_scale *= time_scale_multiplier）
+    pub time_scale_multiplier: f64,
     pub raining: bool,
     pub droplets_rate: f64,
     pub min_r: f64,
@@ -41,7 +42,7 @@ impl Default for RainDropsOptions {
         RainDropsOptions {
             min_r: 10.0,
             max_r: 40.0,
-            time_scale: 1.0,
+            time_scale_multiplier: 1.0,
             raining: true,
             droplets_rate: 50.0,
             droplets_size: [2.0, 4.0],
@@ -110,19 +111,24 @@ impl RainDrops {
         color_image: Rc<ColorImage>,
         opts: Option<RainDropsOptions>,
     ) -> Self {
+        // 初期化雨滴参数
         let opts = match opts {
             Some(x) => x,
             None => RainDropsOptions::default(),
         };
+
+        // 水滴像素密度： 默认1像素
         let droplets_pixel_density = 1.0;
 
+        // 创建背景画布
         let (canvas, ctx) = create_canvas_element(w as u32, h as u32).unwrap();
+        // 根据像素密度创建雨滴画布
         let (droplets, droplets_ctx) = create_canvas_element(
             (w * droplets_pixel_density) as u32,
             (h * droplets_pixel_density) as u32,
         )
         .unwrap();
-        let last_time = window().unwrap().performance().unwrap().now();
+        let last_time = now();
         RainDrops {
             opts,
             scale,
@@ -291,17 +297,21 @@ impl RainDrops {
         self.cleaning_iterations = 50.0;
     }
 
-    pub fn update(&mut self) {
+    pub fn draw(&mut self) {
         // clear old texture
         self.clear_canvas();
 
+        // 当前计数(毫秒)
         let now = now();
         let delta = now - self.last_time;
+        // time_scale = delta时间内运行了帧动画
+        // 限制刷新频率 60FPS(60/s)
+        // time_scale = delta / ((1 / 60) * 1000)
         let mut time_scale = delta * 60.0 / 1000.0;
         if time_scale > 1.1 {
             time_scale = 1.1;
         }
-        time_scale *= self.opts.time_scale;
+        time_scale *= self.opts.time_scale_multiplier;
         self.last_time = now;
 
         self.update_drops(time_scale);
