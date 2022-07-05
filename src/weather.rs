@@ -5,12 +5,11 @@ use std::rc::Rc;
 
 pub struct WeatherOptions {
     pub raining: bool,
-    pub min_r: f64,
-    pub max_r: f64,
+    pub r: (f64, f64),
     pub rain_limit: f64,
     pub rain_chance: f64,
     pub droplets_rate: f64,
-    pub droplets_size: [f64; 2],
+    pub droplets_size: (f64, f64),
     pub trail_rate: f64,
     pub trail_scale_range: [f64; 2],
     pub base: Option<Rc<RefCell<WeatherImage>>>,
@@ -23,12 +22,11 @@ impl Default for WeatherOptions {
     fn default() -> Self {
         WeatherOptions {
             raining: true,
-            min_r: 20.0,
-            max_r: 50.0,
+            r: (20.0, 50.0),
             rain_chance: 0.35,
             rain_limit: 6.0,
             droplets_rate: 50.0,
-            droplets_size: [3.0, 5.5],
+            droplets_size: (3.0, 5.5),
             trail_rate: 1.0,
             trail_scale_range: [0.25, 0.35],
             base: None,
@@ -88,8 +86,7 @@ impl Weather {
                 Weather::Rain(opts)
             }
             WeatherImage::Fallout(_) => {
-                opts.min_r = 30.0;
-                opts.max_r = 60.0;
+                opts.r = (30.0, 60.0);
                 opts.rain_chance = 0.35;
                 opts.droplets_rate = 20.0;
                 opts.trail_rate = 4.0;
@@ -99,10 +96,10 @@ impl Weather {
                 Weather::Fallout(opts)
             }
             WeatherImage::Storm(_) => {
-                opts.max_r = 55.0;
+                opts.r = (20.0, 55.0);
                 opts.rain_chance = 0.4;
                 opts.droplets_rate = 80.0;
-                opts.droplets_size = [3.0, 5.5];
+                opts.droplets_size = (3.0, 5.5);
                 opts.trail_rate = 2.5;
                 opts.trail_scale_range = [0.25, 0.4];
                 opts.base = Some(rc_img.clone());
@@ -120,12 +117,11 @@ impl Weather {
                 Weather::Sun(opts)
             }
             WeatherImage::Drizzle(_) => {
-                opts.min_r = 10.0;
-                opts.max_r = 40.0;
+                opts.r = (10.0, 40.0);
                 opts.rain_chance = 0.15;
                 opts.rain_limit = 2.0;
                 opts.droplets_rate = 10.0;
-                opts.droplets_size = [3.5, 6.0];
+                opts.droplets_size = (3.5, 6.0);
                 opts.base = Some(rc_img.clone());
 
                 Weather::Drizzle(opts)

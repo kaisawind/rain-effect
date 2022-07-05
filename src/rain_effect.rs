@@ -166,7 +166,7 @@ impl RainEffect {
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
             rain_drops.borrow_mut().draw();
             rain_render.borrow().draw();
-            console::log_1(&JsValue::from(now()));
+            // console::log_1(&JsValue::from(now()));
             // Schedule ourself for another requestAnimationFrame callback.
             request_animation_frame(f.borrow().as_ref().unwrap());
         }) as Box<dyn FnMut()>));
