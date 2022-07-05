@@ -158,6 +158,12 @@ impl WebGl {
 
     pub fn create_texture(&self, source: Option<&HtmlCanvasElement>, idx: u32) {
         let texture = self.gl.create_texture();
+        let idx = match idx {
+            1 => WebGlRenderingContext::TEXTURE1,
+            2 => WebGlRenderingContext::TEXTURE2,
+            3 => WebGlRenderingContext::TEXTURE3,
+            _ => WebGlRenderingContext::TEXTURE0,
+        };
         self.active_texture(idx);
         self.gl
             .bind_texture(WebGlRenderingContext::TEXTURE_2D, texture.as_ref());
@@ -188,11 +194,19 @@ impl WebGl {
 
         match source {
             Some(source) => self.update_texture(source),
-            None => {}
+            None => {
+                println!("create_texture source none");
+            }
         };
     }
 
     pub fn active_texture(&self, idx: u32) {
+        let idx = match idx {
+            1 => WebGlRenderingContext::TEXTURE1,
+            2 => WebGlRenderingContext::TEXTURE2,
+            3 => WebGlRenderingContext::TEXTURE3,
+            _ => WebGlRenderingContext::TEXTURE0,
+        };
         self.gl.active_texture(idx);
     }
 

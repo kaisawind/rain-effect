@@ -162,6 +162,8 @@ impl RainEffect {
         let rain_drops = self.rain_drops.clone();
         let rain_render = self.rain_render.clone();
 
+        rain_render.borrow().update_textures();
+
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
             rain_drops.borrow_mut().draw();
             rain_render.borrow().draw();

@@ -456,12 +456,6 @@ impl RainDrops {
         let is_full_drops = self.is_full_drops();
         for (i, rc_drop) in self.drops.iter().enumerate() {
             let mut drop = rc_drop.borrow_mut();
-            console::log_4(
-                &JsValue::from(format!("drop[{}]", i as i32)),
-                &JsValue::from(drop.x),
-                &JsValue::from(drop.y),
-                &JsValue::from(drop.r),
-            );
             if !drop.killed {
                 // 更新重力
                 // 雨滴下滑的几率
