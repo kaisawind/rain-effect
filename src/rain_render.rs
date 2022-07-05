@@ -76,33 +76,33 @@ impl RainRender {
             bg.borrow().canvas.height() as f64,
         );
 
-        gl.create_uniform(UniformType::F2(w as f32, h as f32), "Resolution");
-        gl.create_uniform(UniformType::F1((bg_w / bg_h) as f32), "TextureRatio");
-        gl.create_uniform(UniformType::I1(0), "RenderShine");
-        gl.create_uniform(UniformType::I1(opts.render_shadow as i32), "RenderShadow");
-        gl.create_uniform(UniformType::F1(opts.min_refraction as f32), "MinRefraction");
+        gl.create_uniform(UniformType::F2(w as f32, h as f32), "resolution");
+        gl.create_uniform(UniformType::F1((bg_w / bg_h) as f32), "textureRatio");
+        gl.create_uniform(UniformType::I1(0), "renderShine");
+        gl.create_uniform(UniformType::I1(opts.render_shadow as i32), "renderShadow");
+        gl.create_uniform(UniformType::F1(opts.min_refraction as f32), "minRefraction");
         gl.create_uniform(
             UniformType::F1((opts.max_refraction - opts.min_refraction) as f32),
-            "RefractionDelta",
+            "refractionDelta",
         );
-        gl.create_uniform(UniformType::F1(opts.brightness as f32), "Brightness");
-        gl.create_uniform(UniformType::F1(opts.alpha_multiply as f32), "AlphaMultiply");
-        gl.create_uniform(UniformType::F1(opts.alpha_subtract as f32), "AlphaSubtract");
-        gl.create_uniform(UniformType::F1(opts.parallax_bg as f32), "ParallaxBg");
-        gl.create_uniform(UniformType::F1(opts.parallax_fg as f32), "ParallaxFg");
+        gl.create_uniform(UniformType::F1(opts.brightness as f32), "brightness");
+        gl.create_uniform(UniformType::F1(opts.alpha_multiply as f32), "alphaMultiply");
+        gl.create_uniform(UniformType::F1(opts.alpha_subtract as f32), "alphaSubtract");
+        gl.create_uniform(UniformType::F1(opts.parallax_bg as f32), "parallaxBg");
+        gl.create_uniform(UniformType::F1(opts.parallax_fg as f32), "parallaxFg");
 
         gl.create_texture(None, 0);
 
         let (shine, ctx) = create_canvas_element(2, 2).unwrap();
 
         gl.create_texture(Some(&shine), 1);
-        gl.create_uniform(UniformType::I1(1), "TextureShine");
+        gl.create_uniform(UniformType::I1(1), "textureShine");
 
         gl.create_texture(Some(&bg.borrow().canvas), 2);
-        gl.create_uniform(UniformType::I1(2), "TextureFg");
+        gl.create_uniform(UniformType::I1(2), "textureFg");
 
         gl.create_texture(Some(&fg.borrow().canvas), 3);
-        gl.create_uniform(UniformType::I1(3), "TextureBg");
+        gl.create_uniform(UniformType::I1(3), "textureBg");
 
         RainRender {
             width: w,
@@ -123,7 +123,7 @@ impl RainRender {
         self.gl.use_program();
         self.gl.create_uniform(
             UniformType::F2(self.parallax_x as f32, self.parallax_y as f32),
-            "Parallax",
+            "parallax",
         );
 
         self.update_texture();

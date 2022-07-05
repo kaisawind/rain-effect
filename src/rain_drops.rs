@@ -276,7 +276,8 @@ impl RainDrops {
     }
 
     fn draw_droplet(&self, x: f64, y: f64, r: f64) {
-        let drop = Drop::new();
+        let rc_drop = Drop::new();
+        let drop = rc_drop.clone();
         drop.borrow_mut().x = x * self.droplets_pixel_density;
         drop.borrow_mut().y = y * self.droplets_pixel_density;
         drop.borrow_mut().r = r * self.droplets_pixel_density;

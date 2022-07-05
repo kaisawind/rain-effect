@@ -142,7 +142,7 @@ impl WebGl {
     pub fn create_uniform(&self, ut: UniformType, name: &str) {
         let location = self
             .gl
-            .get_uniform_location(&self.program, &format!("u{}", name));
+            .get_uniform_location(&self.program, &format!("u_{}", name));
         match ut {
             UniformType::F1(x) => {
                 self.gl.uniform1f(location.as_ref(), x);

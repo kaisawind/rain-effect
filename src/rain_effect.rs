@@ -3,7 +3,7 @@ use crate::rain_drops::{RainDrops, RainDropsOptions};
 use crate::rain_render::{RainRender, RainRenderOptions};
 use crate::textures::{BgSize, FgSize, Texture};
 use crate::weather::Weather;
-use crate::{create_canvas_element, now, request_animation_frame};
+use crate::{create_canvas_element, document, now, request_animation_frame};
 use js_sys::Map;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -32,8 +32,7 @@ impl RainEffect {
         }
 
         let window = window().unwrap();
-        let document = window.document().unwrap();
-        let canvas = document.get_element_by_id(&id).unwrap();
+        let canvas = document().get_element_by_id(&id).unwrap();
         let canvas: HtmlCanvasElement = canvas
             .dyn_into::<HtmlCanvasElement>()
             .map_err(|_| ())
